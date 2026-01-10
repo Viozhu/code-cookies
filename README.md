@@ -91,11 +91,3 @@ pnpm preview
 ## Next Steps
 
 See [`tasks.md`](./website-guidelines/tasks.md) for the complete development roadmap. Phase 1 (Project Setup) is complete. Next: Phase 2 (Build Sections).
-
-
-
-
-
-
-
-# code-cookies
