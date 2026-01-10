@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Puzzle, Cookie, Code, ArrowRight } from 'lucide-react'
+import { Puzzle, Cookie, Code } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { SectionDivider } from './SectionDivider'

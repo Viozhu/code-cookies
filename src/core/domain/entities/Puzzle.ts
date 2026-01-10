@@ -53,7 +53,7 @@ export function getNextIncompletePuzzle(
  * Get previous incomplete puzzle
  */
 export function getPreviousIncompletePuzzle(
-  puzzles: Puzzle[],
+  _puzzles: Puzzle[],
   currentPuzzleId: number,
   completedPuzzleIds: number[]
 ): number | null {

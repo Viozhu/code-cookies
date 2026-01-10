@@ -3,7 +3,6 @@
  * Orchestrates game flow and puzzle navigation
  */
 
-import { useEffect } from 'react'
 import type { Puzzle } from '@/core/domain/entities/Puzzle'
 import {
   getNextIncompletePuzzle,

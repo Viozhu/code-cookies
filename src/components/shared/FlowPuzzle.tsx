@@ -30,7 +30,7 @@ type CellState = {
 
 export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: FlowPuzzleProps) {
   const initializeGrid = useCallback(() => {
-    const newGrid = Array(config.gridSize)
+    const newGrid: CellState[][] = Array(config.gridSize)
       .fill(null)
       .map(() =>
         Array(config.gridSize).fill(null).map(() => ({ color: null, pathId: null, isDot: false }))
@@ -51,7 +51,6 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
   const [currentPath, setCurrentPath] = useState<Array<[number, number]>>([])
   const [currentPathId, setCurrentPathId] = useState<string | null>(null)
   const [completedPaths, setCompletedPaths] = useState<Set<string>>(new Set())
-  const [hoveredCell, setHoveredCell] = useState<[number, number] | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [hasCalledCompletion, setHasCalledCompletion] = useState(false)
   const gridContainerRef = useRef<HTMLDivElement>(null)
@@ -188,8 +187,8 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
 
           // Clear path from grid
           setGrid((prevGrid) => {
-            const newGrid = prevGrid.map((rowArr, r) =>
-              rowArr.map((cell, c) => {
+            const newGrid = prevGrid.map((rowArr) =>
+              rowArr.map((cell) => {
                 if (cell.pathId === pathIdToClear && !cell.isDot) {
                   return { color: null, pathId: null, isDot: false }
                 }
@@ -266,8 +265,8 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
 
         // Update grid
         setGrid((prevGrid) => {
-          const newGrid = prevGrid.map((rowArr, r) =>
-            rowArr.map((cell, c) => {
+          const newGrid = prevGrid.map((rowArr) =>
+            rowArr.map((cell) => {
               // Keep existing dots and completed paths
               if (cell.isDot) return cell
               if (cell.pathId && cell.pathId !== currentPathId && completedPaths.has(cell.pathId)) {
@@ -327,8 +326,8 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
 
         // Update grid
         setGrid((prevGrid) => {
-          const newGrid = prevGrid.map((rowArr, r) =>
-            rowArr.map((cell, c) => {
+          const newGrid = prevGrid.map((rowArr) =>
+            rowArr.map((cell) => {
               // Keep dots and completed paths
               if (cell.isDot) return cell
               if (cell.pathId && cell.pathId !== currentPathId && completedPaths.has(cell.pathId)) {
@@ -365,8 +364,8 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
     if (isDragging && currentPath.length > 0) {
       // Clear incomplete path
       setGrid((prevGrid) => {
-        const newGrid = prevGrid.map((rowArr, r) =>
-          rowArr.map((cell, c) => {
+        const newGrid = prevGrid.map((rowArr) =>
+          rowArr.map((cell) => {
             if (cell.pathId === currentPathId && !cell.isDot) {
               return { color: null, pathId: null, isDot: false }
             }
@@ -472,7 +471,6 @@ export function FlowPuzzle({ config, onAllPathsComplete, isCompleted = false }: 
           const row = Math.floor(index / config.gridSize)
           const col = index % config.gridSize
           const cell = grid[row][col]
-          const pair = cell.pathId ? config.pairs.find((p) => p.id === cell.pathId) : null
           const isOnCurrentPath = currentPath.some(([r, c]) => r === row && c === col)
 
           return (

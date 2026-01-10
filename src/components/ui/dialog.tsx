@@ -62,11 +62,16 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   )
 }
 
+type SafeHTMLAttributes = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'onDrag' | 'onDragEnd' | 'onDragStart' | 'onAnimationStart' | 'onAnimationEnd' | 'onTransitionEnd'
+>
+
 export function DialogContent({
   children,
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: SafeHTMLAttributes) {
   const { onOpenChange } = useDialogContext()
 
   return (

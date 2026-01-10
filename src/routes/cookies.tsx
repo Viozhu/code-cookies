@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Particles } from '@/components/ui/particles'
 import { useCookieStore } from '@/application/stores/cookieStore'
 import { generateCookiePositions } from '@/core/utils/math'
-import { CookieJar3D } from '@/presentation/components/canvas/CookieJar3D'
 
 export const Route = createFileRoute('/cookies')({
   component: CookieJarPage,
