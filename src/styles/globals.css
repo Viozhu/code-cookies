@@ -301,9 +301,7 @@
   50% {
     box-shadow: 0 8px 24px rgba(165, 243, 68, 0.5), 0 0 0 8px rgba(165, 243, 68, 0);
   }
-}
-
-/* Scrollbar Utilities */
+}/* Scrollbar Utilities */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
