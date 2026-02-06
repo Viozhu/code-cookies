@@ -1,50 +1,50 @@
 name: Version Packages
 
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches:
+            - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  version:
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
-          fetch-depth: 0
+    version:
+        timeout-minutes: 15
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+        steps:
+            - name: Checkout Repo
+              uses: actions/checkout@v4
+              with:
+                  # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+                  fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 9
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+                  cache: "pnpm"
 
-      - name: Create Release Pull Request or Publish to npm
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          # This expects you to have a script called release which does a build for your packages and publishes them
-          publish: pnpm release
-          version: pnpm changeset:version
-          commit: 'chore: version packages'
-          title: 'chore: version packages'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Create Release Pull Request or Publish to npm
+              id: changesets
+              uses: changesets/action@v1
+              with:
+                  # This expects you to have a script called release which does a build for your packages and publishes them
+                  publish: pnpm release
+                  version: pnpm changeset:version
+                  commit: "chore: version packages"
+                  title: "chore: version packages"
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
