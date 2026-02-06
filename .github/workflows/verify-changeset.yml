@@ -1,125 +1,194 @@
 name: Verify Changeset
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  verify-changeset:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
+    verify-changeset:
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write
+            contents: read
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      - name: Check for changeset
-        id: changeset-check
-        run: |
-          # Get the base branch
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
-          if [ -z "$BASE_REF" ]; then
-            BASE_REF="main"
-          fi
+            - name: Check for changeset-bot comments
+              id: check-bot-comments
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const comments = await github.rest.issues.listComments({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: context.issue.number,
+                      });
 
-          # Fetch base branch
-          git fetch origin ${BASE_REF}:${BASE_REF} || true
+                      // Look for changeset-bot comments that indicate no changeset was found
+                      // Exclude github-actions[bot] (our own workflow comments)
+                      const changesetBotComments = comments.data.filter(
+                          comment => {
+                              // Only check comments from changeset-bot
+                              if (comment.user.login !== 'changeset-bot') {
+                                  return false;
+                              }
+                              
+                              const body = comment.body.toLowerCase();
+                              
+                              // Check for negative indicators (no changeset found)
+                              const hasNoChangeset = (
+                                  body.includes('no changeset found') ||
+                                  body.includes('no changeset') ||
+                                  body.match(/no.*changeset.*found/i) ||
+                                  body.includes('missing changeset') ||
+                                  body.includes('requires a changeset')
+                              );
+                              
+                              // Check for positive indicator (changeset detected)
+                              const hasChangesetDetected = body.includes('changeset detected');
+                              
+                              // If bot says "Changeset detected", that's good - don't fail
+                              if (hasChangesetDetected) {
+                                  return false;
+                              }
+                              
+                              // If bot indicates no changeset, that's bad
+                              return hasNoChangeset;
+                          }
+                      );
 
-          # Get all changed files in the PR
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRTUXB ${BASE_REF}...HEAD 2>/dev/null || echo "")
+                      if (changesetBotComments.length > 0) {
+                          console.log('❌ Changeset-bot detected missing changeset!');
+                          console.log('Bot comments found:');
+                          changesetBotComments.forEach(comment => {
+                              console.log(`- ${comment.user.login}: ${comment.body.substring(0, 100)}...`);
+                          });
+                          core.setOutput('bot_found_no_changeset', 'true');
+                          core.setFailed('Changeset-bot reported: No Changeset found. Please add a changeset file.');
+                      } else {
+                          console.log('✅ Changeset-bot either detected a changeset or has not commented yet.');
+                          core.setOutput('bot_found_no_changeset', 'false');
+                      }
 
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No changed files detected. Skipping changeset check."
-            exit 0
-          fi
+            - name: Check for changeset
+              id: changeset-check
+              run: |
+                  # Get the base branch
+                  BASE_REF="${{ github.event.pull_request.base.ref }}"
+                  if [ -z "$BASE_REF" ]; then
+                    BASE_REF="main"
+                  fi
 
-          # Exclude non-code files from requiring changesets
-          EXCLUDED_PATTERNS="\.md$|\.yml$|\.yaml$|\.json$|\.lock$|^\.github/|^\.changeset/|^\.gitignore$|^\.editorconfig$|^\.prettierrc|^\.eslintrc|^tsconfig|^vite\.config|^tailwind\.config|^postcss\.config|^components\.json|^README|^CHANGELOG"
+                  # Fetch base branch
+                  git fetch origin ${BASE_REF}:${BASE_REF} || true
 
-          CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -vE "${EXCLUDED_PATTERNS}" || true)
+                  # Get all changed files in the PR
+                  CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRTUXB ${BASE_REF}...HEAD 2>/dev/null || echo "")
 
-          # If no code changes, skip the check
-          if [ -z "$CODE_CHANGES" ]; then
-            echo "✅ No code changes detected. Changeset not required."
-            exit 0
-          fi
+                  if [ -z "$CHANGED_FILES" ]; then
+                    echo "No changed files detected. Skipping changeset check."
+                    exit 0
+                  fi
 
-          # Check if changeset files exist in the PR
-          CHANGESET_FILES=$(echo "$CHANGED_FILES" | grep -E '^\.changeset/.*\.md$' || true)
+                  # Exclude non-code files from requiring changesets
+                  EXCLUDED_PATTERNS="\.md$|\.yml$|\.yaml$|\.json$|\.lock$|^\.github/|^\.changeset/|^\.gitignore$|^\.editorconfig$|^\.prettierrc|^\.eslintrc|^tsconfig|^vite\.config|^tailwind\.config|^postcss\.config|^components\.json|^README|^CHANGELOG"
 
-          if [ -z "$CHANGESET_FILES" ]; then
-            echo "❌ No changeset file found in PR!"
-            echo ""
-            echo "This PR contains code changes but no changeset file was found in \`.changeset/\` directory."
-            echo ""
-            echo "Changed files:"
-            echo "$CHANGED_FILES"
-            echo ""
-            echo "Please add a changeset by running: \`pnpm changeset\`"
-            exit 1
-          else
-            echo "✅ Found changeset file(s):"
-            echo "$CHANGESET_FILES"
-            exit 0
-          fi
+                  CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -vE "${EXCLUDED_PATTERNS}" || true)
 
-      - name: Comment on PR if no changeset
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const body = `## ⚠️ Changeset Required
+                  # If no code changes, skip the check
+                  if [ -z "$CODE_CHANGES" ]; then
+                    echo "✅ No code changes detected. Changeset not required."
+                    exit 0
+                  fi
 
-            This PR contains code changes but no changeset file was found in \`.changeset/\` directory.
+                  # Check if there are any valid changeset files in the PR branch (HEAD)
+                  # This checks what exists in the PR, not what was added/modified
+                  # Exclude documentation files like README.md, QUICK_START.md, etc.
+                  if [ ! -d ".changeset" ]; then
+                    echo "❌ No .changeset directory found!"
+                    exit 1
+                  fi
 
-            **This check must pass before the PR can be merged.**
+                  # Find all valid changeset files in HEAD (the PR branch)
+                  VALID_CHANGESET_FILES=$(find .changeset -name "*.md" -type f 2>/dev/null | grep -vE "(README|QUICK_START|example-changeset|setup-changelog|CHANGELOG)" || true)
 
-            ### How to add a changeset:
+                  if [ -z "$VALID_CHANGESET_FILES" ]; then
+                    echo "❌ No changeset file found in PR!"
+                    echo ""
+                    echo "This PR contains code changes but no changeset file was found in \`.changeset/\` directory."
+                    echo ""
+                    echo "Changed files:"
+                    echo "$CHANGED_FILES"
+                    echo ""
+                    echo "Code changes detected:"
+                    echo "$CODE_CHANGES"
+                    echo ""
+                    echo "Please add a changeset by running: \`pnpm changeset\`"
+                    exit 1
+                  else
+                    echo "✅ Found changeset file(s) in PR:"
+                    echo "$VALID_CHANGESET_FILES"
+                    exit 0
+                  fi
 
-            Run this command:
-            \`\`\`bash
-            pnpm changeset
-            \`\`\`
+            - name: Comment on PR if no changeset
+              if: failure()
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const body = `## ⚠️ Changeset Required
 
-            Or manually create a file in \`.changeset/\` with this format:
-            \`\`\`markdown
-            ---
-            "code-cookies": patch
-            ---
+                      This PR contains code changes but no changeset file was found in \`.changeset/\` directory.
 
-            Description of your changes here
-            \`\`\`
+                      **This check must pass before the PR can be merged.**
 
-            See [.changeset/README.md](/.changeset/README.md) for more information.`;
+                      ### How to add a changeset:
 
-            // Check if we already commented
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
+                      Run this command:
+                      \`\`\`bash
+                      pnpm changeset
+                      \`\`\`
 
-            const botComment = comments.data.find(
-              comment => comment.user.type === 'Bot' && comment.body.includes('Changeset Required')
-            );
+                      Or manually create a file in \`.changeset/\` with this format:
+                      \`\`\`markdown
+                      ---
+                      "code-cookies": patch
+                      ---
 
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }
+                      Description of your changes here
+                      \`\`\`
+
+                      See [.changeset/README.md](/.changeset/README.md) for more information.`;
+
+                      // Check if we already commented
+                      const comments = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                      });
+
+                      const botComment = comments.data.find(
+                        comment => comment.user.type === 'Bot' && comment.body.includes('Changeset Required')
+                      );
+
+                      if (botComment) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: botComment.id,
+                          body: body
+                        });
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: context.issue.number,
+                          body: body
+                        });
+                      }
