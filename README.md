@@ -81,12 +81,42 @@ pnpm preview
 └── website-guidelines/   # Project documentation
 ```
 
+## Changelog Management
+
+This project uses [Changesets](https://github.com/changesets/changesets) to manage changelogs and versioning.
+
+### Adding a Changeset
+
+**Every PR that contains code changes must include a changeset file.** This ensures all changes are properly documented in the CHANGELOG.
+
+1. Create a changeset using the CLI:
+```bash
+pnpm changeset
+```
+
+2. Follow the prompts to select the change type (major/minor/patch) and write a description.
+
+3. Commit the generated changeset file along with your changes.
+
+### Change Types
+
+- **major**: Breaking changes
+- **minor**: New features (backward compatible)
+- **patch**: Bug fixes and small improvements
+
+### CI Check
+
+A GitHub Actions workflow automatically checks that PRs include changeset files. PRs without changesets will be blocked from merging.
+
+See [`.changeset/README.md`](.changeset/README.md) for detailed instructions.
+
 ## Documentation
 
 - [`PROJECT_REQUIREMENTS.md`](./website-guidelines/PROJECT_REQUIREMENTS.md) - Technical specifications
 - [`STYLE_GUIDE.md`](./website-guidelines/STYLE_GUIDE.md) - Design system and visual standards
 - [`tasks.md`](./website-guidelines/tasks.md) - Development progress tracking
 - [`website-sections/`](./website-guidelines/website-sections/) - Section-specific specifications
+- [`CHANGELOG.md`](./CHANGELOG.md) - Project changelog
 
 ## Next Steps
 
