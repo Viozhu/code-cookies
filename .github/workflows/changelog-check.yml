@@ -17,20 +17,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Check for changesets
         id: changeset-check
         run: |
@@ -73,8 +59,16 @@ jobs:
             echo "✅ Found changeset file(s):"
             echo "$CHANGESET_FILES"
             
-            # Validate changeset format using changeset status (if available)
-            pnpm changeset status --output=status.json 2>/dev/null || echo "Note: Could not validate changeset format, but file exists."
+            # Validate changeset format (basic check - file exists and has correct structure)
+            for file in $CHANGESET_FILES; do
+              if [ -f "$file" ]; then
+                if grep -q '^---$' "$file" && grep -q '"code-cookies"' "$file"; then
+                  echo "  ✓ $file has valid format"
+                else
+                  echo "  ⚠ $file may have incorrect format"
+                fi
+              fi
+            done
           fi
 
       - name: Comment on PR if no changeset
