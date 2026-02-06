@@ -29,26 +29,49 @@ jobs:
                           issue_number: context.issue.number,
                       });
 
-                      // Look for bot comments that say "No Changeset found" or similar
-                      const botComments = comments.data.filter(
-                          comment => comment.user.type === 'Bot' && (
-                              comment.body.includes('No Changeset found') ||
-                              comment.body.includes('No changeset found') ||
-                              comment.body.includes('no changeset found') ||
-                              comment.body.match(/no.*changeset.*found/i)
-                          )
+                      // Look for changeset-bot comments that indicate no changeset was found
+                      // Exclude github-actions[bot] (our own workflow comments)
+                      const changesetBotComments = comments.data.filter(
+                          comment => {
+                              // Only check comments from changeset-bot
+                              if (comment.user.login !== 'changeset-bot') {
+                                  return false;
+                              }
+                              
+                              const body = comment.body.toLowerCase();
+                              
+                              // Check for negative indicators (no changeset found)
+                              const hasNoChangeset = (
+                                  body.includes('no changeset found') ||
+                                  body.includes('no changeset') ||
+                                  body.match(/no.*changeset.*found/i) ||
+                                  body.includes('missing changeset') ||
+                                  body.includes('requires a changeset')
+                              );
+                              
+                              // Check for positive indicator (changeset detected)
+                              const hasChangesetDetected = body.includes('changeset detected');
+                              
+                              // If bot says "Changeset detected", that's good - don't fail
+                              if (hasChangesetDetected) {
+                                  return false;
+                              }
+                              
+                              // If bot indicates no changeset, that's bad
+                              return hasNoChangeset;
+                          }
                       );
 
-                      if (botComments.length > 0) {
+                      if (changesetBotComments.length > 0) {
                           console.log('❌ Changeset-bot detected missing changeset!');
                           console.log('Bot comments found:');
-                          botComments.forEach(comment => {
+                          changesetBotComments.forEach(comment => {
                               console.log(`- ${comment.user.login}: ${comment.body.substring(0, 100)}...`);
                           });
                           core.setOutput('bot_found_no_changeset', 'true');
                           core.setFailed('Changeset-bot reported: No Changeset found. Please add a changeset file.');
                       } else {
-                          console.log('✅ No "No Changeset found" comments from bots detected.');
+                          console.log('✅ Changeset-bot either detected a changeset or has not commented yet.');
                           core.setOutput('bot_found_no_changeset', 'false');
                       }
 
