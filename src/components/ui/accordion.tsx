@@ -23,14 +23,14 @@ interface AccordionProps {
   className?: string
 }
 
-export function Accordion({
+export function Accordion ({
   type = 'single',
   collapsible = true,
   value: controlledValue,
   defaultValue,
   onValueChange: controlledOnValueChange,
   children,
-  className,
+  className
 }: AccordionProps) {
   const [uncontrolledValue, setUncontrolledValue] = React.useState<
     string | null
@@ -60,7 +60,7 @@ export function Accordion({
       value={{
         value,
         onValueChange: handleValueChange,
-        collapsible,
+        collapsible
       }}
     >
       <div className={cn('w-full', className)}>{children}</div>
@@ -72,9 +72,9 @@ interface AccordionItemContextValue {
   value: string
 }
 
-const AccordionItemContext = React.createContext<AccordionItemContextValue | undefined>(
-  undefined
-)
+const AccordionItemContext = React.createContext<
+  AccordionItemContextValue | undefined
+>(undefined)
 
 interface AccordionItemProps {
   value: string
@@ -82,14 +82,19 @@ interface AccordionItemProps {
   className?: string
 }
 
-export function AccordionItem({
+export function AccordionItem ({
   value,
   children,
-  className,
+  className
 }: AccordionItemProps) {
   return (
     <AccordionItemContext.Provider value={{ value }}>
-      <div className={cn('border-b border-gray-200 dark:border-gray-800', className)}>
+      <div
+        className={cn(
+          'border-b border-gray-200 dark:border-gray-800',
+          className
+        )}
+      >
         {children}
       </div>
     </AccordionItemContext.Provider>
@@ -101,18 +106,20 @@ interface AccordionTriggerProps {
   className?: string
 }
 
-export function AccordionTrigger({
+export function AccordionTrigger ({
   children,
-  className,
+  className
 }: AccordionTriggerProps) {
   const accordionContext = React.useContext(AccordionContext)
   const itemContext = React.useContext(AccordionItemContext)
-  
+
   if (!accordionContext) {
     throw new Error('AccordionTrigger must be used within Accordion')
   }
   if (!itemContext) {
-    throw new Error('AccordionTrigger must be used within AccordionItem')
+    throw new Error(
+      'AccordionTrigger must be used within AccordionItem component'
+    )
   }
 
   const { value, onValueChange } = accordionContext
@@ -122,7 +129,7 @@ export function AccordionTrigger({
 
   return (
     <button
-      type="button"
+      type='button'
       onClick={() => onValueChange(itemValue)}
       className={cn(
         'w-full flex items-center justify-between',
@@ -138,19 +145,21 @@ export function AccordionTrigger({
       aria-expanded={isOpen}
       aria-controls={`accordion-content-${itemValue}`}
     >
-      <span className="pr-4">{children}</span>
+      <span className='pr-4'>{children}</span>
       <motion.div
         animate={{ rotate: isOpen ? 180 : 0 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="flex-shrink-0"
+        className='flex-shrink-0'
       >
-        <ChevronDown className={cn(
-          'w-5 h-5',
-          // Green accent for FAQ section (when trigger has text-white class)
-          className?.includes('text-white') 
-            ? 'text-[#A5F344] group-hover:text-[#B8FF6B]' 
-            : 'text-gray-500 dark:text-gray-400'
-        )} />
+        <ChevronDown
+          className={cn(
+            'w-5 h-5',
+            // Green accent for FAQ section (when trigger has text-white class)
+            className?.includes('text-white')
+              ? 'text-[#A5F344] group-hover:text-[#B8FF6B]'
+              : 'text-gray-500 dark:text-gray-400'
+          )}
+        />
       </motion.div>
     </button>
   )
@@ -161,13 +170,13 @@ interface AccordionContentProps {
   className?: string
 }
 
-export function AccordionContent({
+export function AccordionContent ({
   children,
-  className,
+  className
 }: AccordionContentProps) {
   const accordionContext = React.useContext(AccordionContext)
   const itemContext = React.useContext(AccordionItemContext)
-  
+
   if (!accordionContext) {
     throw new Error('AccordionContent must be used within Accordion')
   }
@@ -189,7 +198,7 @@ export function AccordionContent({
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
-          className="overflow-hidden"
+          className='overflow-hidden'
         >
           <div
             id={`accordion-content-${itemValue}`}
@@ -207,4 +216,3 @@ export function AccordionContent({
     </AnimatePresence>
   )
 }
-
