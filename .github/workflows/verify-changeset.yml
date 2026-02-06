@@ -48,14 +48,14 @@ jobs:
                     exit 0
                   fi
 
-                  # Check if changeset files were ADDED in this PR (not just modified or deleted)
-                  # Use --diff-filter=A to only get added files
-                  ADDED_CHANGESET_FILES=$(git diff --name-only --diff-filter=A ${BASE_REF}...HEAD 2>/dev/null | grep -E '^\.changeset/.*\.md$' || true)
+                  # Check for changeset files that are ADDED or MODIFIED in this PR (not deleted)
+                  # Exclude documentation files like README.md, QUICK_START.md, etc.
+                  ADDED_OR_MODIFIED_CHANGESET_FILES=$(git diff --name-only --diff-filter=AM ${BASE_REF}...HEAD 2>/dev/null | grep -E '^\.changeset/.*\.md$' | grep -vE "(README|QUICK_START|example-changeset|setup-changelog|CHANGELOG)" || true)
 
-                  if [ -z "$ADDED_CHANGESET_FILES" ]; then
+                  if [ -z "$ADDED_OR_MODIFIED_CHANGESET_FILES" ]; then
                     echo "❌ No changeset file found in PR!"
                     echo ""
-                    echo "This PR contains code changes but no changeset file was added in \`.changeset/\` directory."
+                    echo "This PR contains code changes but no changeset file was added or modified in \`.changeset/\` directory."
                     echo ""
                     echo "Changed files:"
                     echo "$CHANGED_FILES"
@@ -66,8 +66,8 @@ jobs:
                     echo "Please add a changeset by running: \`pnpm changeset\`"
                     exit 1
                   else
-                    echo "✅ Found changeset file(s) added in this PR:"
-                    echo "$ADDED_CHANGESET_FILES"
+                    echo "✅ Found changeset file(s) in PR:"
+                    echo "$ADDED_OR_MODIFIED_CHANGESET_FILES"
                     exit 0
                   fi
 
