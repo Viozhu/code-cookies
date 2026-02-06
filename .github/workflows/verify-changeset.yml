@@ -48,14 +48,21 @@ jobs:
                     exit 0
                   fi
 
-                  # Check for changeset files that are ADDED or MODIFIED in this PR (not deleted)
+                  # Check if there are any valid changeset files in the PR branch (HEAD)
+                  # This checks what exists in the PR, not what was added/modified
                   # Exclude documentation files like README.md, QUICK_START.md, etc.
-                  ADDED_OR_MODIFIED_CHANGESET_FILES=$(git diff --name-only --diff-filter=AM ${BASE_REF}...HEAD 2>/dev/null | grep -E '^\.changeset/.*\.md$' | grep -vE "(README|QUICK_START|example-changeset|setup-changelog|CHANGELOG)" || true)
+                  if [ ! -d ".changeset" ]; then
+                    echo "❌ No .changeset directory found!"
+                    exit 1
+                  fi
 
-                  if [ -z "$ADDED_OR_MODIFIED_CHANGESET_FILES" ]; then
+                  # Find all valid changeset files in HEAD (the PR branch)
+                  VALID_CHANGESET_FILES=$(find .changeset -name "*.md" -type f 2>/dev/null | grep -vE "(README|QUICK_START|example-changeset|setup-changelog|CHANGELOG)" || true)
+
+                  if [ -z "$VALID_CHANGESET_FILES" ]; then
                     echo "❌ No changeset file found in PR!"
                     echo ""
-                    echo "This PR contains code changes but no changeset file was added or modified in \`.changeset/\` directory."
+                    echo "This PR contains code changes but no changeset file was found in \`.changeset/\` directory."
                     echo ""
                     echo "Changed files:"
                     echo "$CHANGED_FILES"
@@ -67,7 +74,7 @@ jobs:
                     exit 1
                   else
                     echo "✅ Found changeset file(s) in PR:"
-                    echo "$ADDED_OR_MODIFIED_CHANGESET_FILES"
+                    echo "$VALID_CHANGESET_FILES"
                     exit 0
                   fi
 
