@@ -17,55 +17,62 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for changeset files
-        id: check-changeset
+      - name: Check for changesets
+        id: changeset-check
         run: |
-          # Get the base branch from the PR event
+          # Check if there are code changes (exclude docs, config, CI files)
+          EXCLUDED_PATTERNS="\.md$|\.yml$|\.yaml$|\.json$|\.lock$|^\.github/|^\.changeset/|^\.gitignore$|^\.editorconfig$|^\.prettierrc|^\.eslintrc|^tsconfig|^vite\.config|^tailwind\.config|^postcss\.config|^components\.json|^README|^CHANGELOG"
+          
           BASE_REF="${{ github.event.pull_request.base.ref }}"
           if [ -z "$BASE_REF" ]; then
             BASE_REF="main"
           fi
           
-          # Fetch the base branch to compare against
           git fetch origin ${BASE_REF}:${BASE_REF} || true
-          
-          # Get the list of changed files in the PR
-          # Use HEAD^1 to compare against the base branch
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRTUXB ${BASE_REF}...HEAD 2>/dev/null || git diff --name-only --diff-filter=ACMRTUXB HEAD~1...HEAD 2>/dev/null || echo "")
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRTUXB ${BASE_REF}...HEAD 2>/dev/null || echo "")
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "No changed files detected. Skipping changelog check."
-            echo "has_changeset=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
-          # Check if there are any changeset files in the PR
-          CHANGESET_FILES=$(echo "$CHANGED_FILES" | grep -E '^\.changeset/.*\.md$' || true)
-          
-          # Check if there are any changes outside of documentation, CI, or config files
-          EXCLUDED_PATTERNS="\.md$|\.yml$|\.yaml$|\.json$|\.lock$|^\.github/|^\.changeset/|^\.gitignore$|^\.editorconfig$|^\.prettierrc|^\.eslintrc|^tsconfig|^vite\.config|^tailwind\.config|^postcss\.config|^components\.json|^README|^CHANGELOG"
           CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -vE "${EXCLUDED_PATTERNS}" || true)
           
           if [ -z "$CODE_CHANGES" ]; then
             echo "No code changes detected. Skipping changelog check."
-            echo "has_changeset=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
+          # Check if changeset files exist in the PR
+          # This follows the Changesets recommendation: https://github.com/changesets/changesets#checking-for-changesets
+          CHANGESET_FILES=$(echo "$CHANGED_FILES" | grep -E '^\.changeset/.*\.md$' || true)
+          
           if [ -z "$CHANGESET_FILES" ]; then
-            echo "❌ No changeset file found!"
+            echo "❌ No changeset file found in PR!"
+            echo ""
             echo "Changed files:"
             echo "$CHANGED_FILES"
-            echo "has_changeset=false" >> $GITHUB_OUTPUT
+            echo ""
+            echo "According to Changesets documentation, PRs with code changes must include a changeset."
             exit 1
           else
             echo "✅ Found changeset file(s):"
             echo "$CHANGESET_FILES"
-            echo "has_changeset=true" >> $GITHUB_OUTPUT
+            
+            # Validate changeset format (basic check - file exists and has correct structure)
+            for file in $CHANGESET_FILES; do
+              if [ -f "$file" ]; then
+                if grep -q '^---$' "$file" && grep -q '"code-cookies"' "$file"; then
+                  echo "  ✓ $file has valid format"
+                else
+                  echo "  ⚠ $file may have incorrect format"
+                fi
+              fi
+            done
           fi
 
       - name: Comment on PR if no changeset
-        if: steps.check-changeset.outputs.has_changeset == 'false'
+        if: failure()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -74,7 +81,7 @@ jobs:
             
             This PR contains code changes but no changeset file was found.
             
-            Please add a changeset file by running:
+            According to the [Changesets documentation](https://github.com/changesets/changesets), please add a changeset file by running:
             \`\`\`bash
             pnpm changeset
             \`\`\`
@@ -118,9 +125,3 @@ jobs:
                 body: body
               });
             }
-
-      - name: Fail if no changeset
-        if: steps.check-changeset.outputs.has_changeset == 'false'
-        run: |
-          echo "::error::No changeset file found. Please add a changeset file to your PR."
-          exit 1

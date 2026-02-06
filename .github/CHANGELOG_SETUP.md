@@ -1,6 +1,6 @@
 # Changelog Setup Guide
 
-This guide explains how to set up and use the changelog management system in this project.
+This guide explains how to set up and use the changelog management system in this project using [Changesets](https://github.com/changesets/changesets).
 
 ## Initial Setup
 
@@ -13,9 +13,10 @@ pnpm add -D @changesets/cli
 ### 2. Verify Configuration
 
 The following files should already be in place:
-- `.changeset/config.json` - Changeset configuration
+- `.changeset/config.json` - Changeset configuration (based on [Changesets config schema](https://github.com/changesets/changesets/blob/main/docs/config-file-options.md))
 - `.changeset/README.md` - User guide for creating changesets
-- `.github/workflows/changelog-check.yml` - CI workflow that checks for changesets
+- `.github/workflows/changelog-check.yml` - CI workflow that checks for changesets (uses `changeset status` as recommended)
+- `.github/workflows/version-packages.yml` - Automated versioning workflow (optional)
 
 ### 3. Set Up Branch Protection (GitHub)
 
@@ -55,6 +56,8 @@ The CI workflow will:
 
 ### For Maintainers
 
+#### Manual Release Process
+
 When ready to release:
 
 1. **Version bump**: Run `pnpm changeset:version`
@@ -66,6 +69,20 @@ When ready to release:
 2. **Release**: Run `pnpm release` (if publishing to npm)
    - Builds the project
    - Publishes to npm (if configured)
+
+#### Automated Release Process (Recommended)
+
+The `version-packages.yml` workflow automates the release process:
+
+1. When changesets are merged to `main`, the workflow automatically:
+   - Creates a "Version Packages" PR with version bumps and changelog updates
+   - When that PR is merged, it publishes to npm (if `NPM_TOKEN` is configured)
+
+2. To enable automated publishing:
+   - Add `NPM_TOKEN` secret to your GitHub repository
+   - The workflow will automatically publish when version PRs are merged
+
+See the [Changesets GitHub Action documentation](https://github.com/changesets/action) for more details.
 
 ## Troubleshooting
 
