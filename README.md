@@ -1,6 +1,6 @@
 # CodeCookies
 
-Interactive educational platform teaching children (ages 7-12) programming logic through puzzles and gamified challenges, with seamless transition to Python coding.
+Interactive educational platform teaching children (ages 7-12) programming logic through puzzles and gamified challenges, with seamless transition to Python coding
 
 ## Tech Stack
 
